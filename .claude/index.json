@@ -1,0 +1,90 @@
+{
+  "timestamp": "2026-03-19T10:30:45+08:00",
+  "project": {
+    "name": "base-images",
+    "description": "基础 Docker 镜像仓库，构建 PostgreSQL 向量搜索扩展镜像",
+    "root_path": "/Users/harmay/code/hiext/base-images",
+    "git_branch": "main"
+  },
+  "scan_info": {
+    "strategy": "adaptive",
+    "phases_completed": ["A", "B"],
+    "truncated": false
+  },
+  "modules": [
+    {
+      "name": "postgres",
+      "path": "postgres",
+      "description": "PostgreSQL 基础镜像构建模块",
+      "language": "Dockerfile, Shell, YAML",
+      "entry_points": [
+        "postgres/Dockerfile"
+      ],
+      "key_files": [
+        "postgres/Dockerfile",
+        "postgres/docker-compose.yml",
+        "postgres/versions.yaml",
+        "postgres/immich-docker-entrypoint.sh",
+        "postgres/healthcheck.sh",
+        "postgres/set-env.sh",
+        "postgres/postgresql.ssd.conf",
+        "postgres/postgresql.hdd.conf"
+      ],
+      "interfaces": [
+        "postgres/Dockerfile (构建接口)",
+        "postgres/docker-compose.yml (部署接口)",
+        "postgres/healthcheck.sh (健康检查接口)"
+      ],
+      "tests": [],
+      "config_files": [
+        "postgres/versions.yaml",
+        "postgres/postgresql.ssd.conf",
+        "postgres/postgresql.hdd.conf"
+      ],
+      "has_tests": false,
+      "coverage": {
+        "estimated_files": 13,
+        "scanned_files": 13,
+        "percentage": 100,
+        "gaps": []
+      }
+    }
+  ],
+  "root_coverage": {
+    "estimated_total_files": 40,
+    "scanned_files": 15,
+    "percentage": 37.5,
+    "scanned_categories": {
+      "dockerfile": 1,
+      "shell_scripts": 3,
+      "yaml_configs": 3,
+      "markdown_docs": 2,
+      "postgres_configs": 2,
+      "github_actions": 1
+    },
+    "skipped_categories": {
+      "git_files": 25,
+      "spec_workflow_templates": 6,
+      "reason": "模板文件和工作流文档不属于核心代码"
+    }
+  },
+  "ignored_stats": {
+    "patterns": [
+      ".git/**",
+      ".vscode/**",
+      ".idea/**",
+      "*.vsix",
+      ".history/",
+      ".DS_Store",
+      "postgres/data"
+    ],
+    "source": ".gitignore"
+  },
+  "next_steps": [],
+  "recommendations": [
+    "项目结构清晰，核心模块已完整扫描",
+    "建议为 postgres 模块添加集成测试",
+    "考虑添加镜像安全扫描工具（如 Trivy）",
+    "可以增加构建文档说明多架构构建流程"
+  ]
+}
