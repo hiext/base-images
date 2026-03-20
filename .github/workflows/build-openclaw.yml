@@ -100,17 +100,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [check-version, matrix]
     if: always() && (needs.check-version.result == 'success' || needs.check-version.result == 'skipped')
-    strategy:
-      fail-fast: false
-      matrix:
-        node_version:
-          - version: "24"
-            suffix: ""
-          - version: "22"
-            suffix: "-node22"
-          - version: "20"
-            suffix: "-node20"
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -151,8 +140,8 @@ jobs:
           images: |
             name=ghcr.io/${{ github.repository_owner }}/openclaw
           tags: |
-            type=raw,value=${{ needs.check-version.outputs.version }}${{ matrix.node_version.suffix }}
-            type=raw,value=latest${{ matrix.node_version.suffix }},enable=${{ matrix.node_version.suffix == '' }}
+            type=raw,value=${{ needs.check-version.outputs.version }}
+            type=raw,value=latest
 
       - name: Build and push image
         uses: docker/build-push-action@v5
@@ -165,9 +154,6 @@ jobs:
           cache-to: type=gha,mode=max
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
-          build-args: |
-            OPENCLAW_VERSION=${{ needs.check-version.outputs.version }}
-            NODE_VERSION=${{ matrix.node_version.version }}
 
       - name: Image digest
         run: echo ${{ steps.build.outputs.digest }}

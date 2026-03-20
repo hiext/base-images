@@ -1,108 +1,57 @@
 # syntax=docker/dockerfile:1.7
 #
-# OpenClaw Docker Image - Production Ready
+# OpenClaw Docker Image - Extended with Python and FFmpeg
 #
-# 基于 Node.js 官方镜像，参考 OpenClaw 官方 Dockerfile 最佳实践
+# 基于 OpenClaw 官方镜像，添加 Python、FFmpeg 等工具
 #
 # 构建示例:
-#   docker build -t openclaw:latest .
-#   docker build --build-arg NODE_VERSION=22 -t openclaw:node22 .
+#   docker build -t openclaw:extended .
 #
 # 运行示例:
-#   docker run -d -p 18789:18789 openclaw:latest
+#   docker run -d -p 18789:18789 openclaw:extended
 #
 
 # ============================================
-# 构建参数定义
+# 使用 OpenClaw 官方镜像作为基础
 # ============================================
-ARG NODE_VERSION=20
-ARG OPENCLAW_VERSION=latest
+FROM ghcr.io/openclaw/openclaw:latest AS base
 
-# ============================================
-# 阶段 1: 基础镜像
-# ============================================
-ARG NODE_VERSION
-FROM node:${NODE_VERSION}-bookworm-slim AS base
+USER root
 
-# 设置环境变量
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=UTC
-ENV LANG=C.UTF-8
-ENV LC_ALL=C.UTF-8
-
-# 安装基础依赖
+# 安装 Python 和 FFmpeg
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    wget \
-    ca-certificates \
     python3 \
     python3-pip \
+    python3-venv \
     ffmpeg \
+    curl \
+    wget \
     git \
+    vim \
+    procps \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# ============================================
-# 阶段 2: 安装 OpenClaw
-# ============================================
-FROM base AS builder
+# 验证安装
+RUN python3 --version && ffmpeg -version
 
-ARG OPENCLAW_VERSION
-
-# 安装 OpenClaw（允许失败并重试）
-RUN set -eux; \
-    # 配置 npm
-    npm config set registry https://registry.npmjs.org/; \
-    npm config set loglevel verbose; \
-    # 尝试安装，最多重试 3 次
-    for i in 1 2 3; do \
-        npm install -g openclaw@${OPENCLAW_VERSION} && break || { \
-            echo "Attempt $i failed, retrying in 5 seconds..."; \
-            sleep 5; \
-            npm cache clean --force; \
-        }; \
-    done; \
-    # 验证安装
-    npm list -g openclaw || echo "Package list check completed"
-
-# ============================================
-# 阶段 3: 运行时镜像
-# ============================================
-FROM base AS runtime
-
-# 从构建阶段复制 OpenClaw
-COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
-COPY --from=builder /usr/local/bin /usr/local/bin
-
-# 创建必要的目录
-RUN mkdir -p /app/data /app/config /var/log/openclaw \
-    && chmod 755 /app /var/log/openclaw
-
-# 复制脚本和配置
+# 复制自定义脚本
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY scripts/healthcheck.sh /usr/local/bin/healthcheck.sh
-COPY config/openclaw.default.conf /etc/openclaw/openclaw.default.conf
 
 RUN chmod +x /usr/local/bin/*.sh
 
-# 设置环境变量
-ENV NODE_ENV=production
-ENV OPENCLAW_PORT=18789
-ENV OPENCLAW_BIND=127.0.0.1
+# 创建应用目录
+RUN mkdir -p /app/data /app/config /var/log/openclaw \
+    && chown -R node:node /app /var/log/openclaw
 
-# 暴露端口
-EXPOSE 18789
+USER node
+
+WORKDIR /app
 
 # 健康检查
 HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \
-    CMD /usr/local/bin/healthcheck.sh
-
-# 创建非 root 用户
-RUN useradd -r -s /bin/false -u 1000 openclaw \
-    && chown -R openclaw:openclaw /app /var/log/openclaw
-
-USER openclaw
-WORKDIR /app
+    CMD node -e "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["openclaw", "gateway", "--allow-unconfigured"]
+CMD ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]
