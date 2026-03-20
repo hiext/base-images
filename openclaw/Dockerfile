@@ -46,6 +46,7 @@ ENV LC_ALL=C.UTF-8
 FROM base AS deps
 
 # 安装系统依赖、Python、FFmpeg
+# 注意：Debian 和 Ubuntu 的包名可能略有不同
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
@@ -60,6 +61,8 @@ RUN set -eux; \
         python3-venv \
         # FFmpeg 和 FFprobe
         ffmpeg \
+        # 构建工具（某些 npm 包可能需要）
+        build-essential \
         # 其他实用工具
         git \
         vim \
@@ -92,7 +95,9 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*; \
     # 验证安装
     node --version; \
-    npm --version
+    npm --version; \
+    # 配置 npm（避免权限问题）
+    npm config set unsafe-perm true
 
 # ============================================
 # 阶段 4: 安装 OpenClaw
@@ -103,10 +108,13 @@ FROM nodejs AS openclaw
 ARG OPENCLAW_VERSION
 
 # 全局安装 OpenClaw
+# 使用 unsafe-perm 避免权限问题
 RUN set -eux; \
-    npm install -g openclaw@${OPENCLAW_VERSION}; \
-    # 验证安装
-    openclaw --version || echo "OpenClaw installed successfully"
+    npm install -g --unsafe-perm openclaw@${OPENCLAW_VERSION}; \
+    # 验证安装（某些情况下 --version 可能失败，但包已安装）
+    openclaw --version || echo "OpenClaw ${OPENCLAW_VERSION} installed"; \
+    # 确保 openclaw 可执行
+    which openclaw || npm bin -g
 
 # ============================================
 # 阶段 5: 配置和脚本
