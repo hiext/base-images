@@ -103,19 +103,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        base_image:
-          - name: ubuntu
-            tag: "24.04"
-            node_version: "24"
+        node_version:
+          - version: "24"
             suffix: ""
-          - name: ubuntu
-            tag: "22.04"
-            node_version: "22"
-            suffix: "-ubuntu22"
-          - name: debian
-            tag: bookworm
-            node_version: "24"
-            suffix: "-debian"
+          - version: "22"
+            suffix: "-node22"
+          - version: "20"
+            suffix: "-node20"
 
     steps:
       - name: Checkout
@@ -157,8 +151,8 @@ jobs:
           images: |
             name=ghcr.io/${{ github.repository_owner }}/openclaw
           tags: |
-            type=raw,value=${{ needs.check-version.outputs.version }}${{ matrix.base_image.suffix }}
-            type=raw,value=latest${{ matrix.base_image.suffix }},enable=${{ matrix.base_image.suffix == '' }}
+            type=raw,value=${{ needs.check-version.outputs.version }}${{ matrix.node_version.suffix }}
+            type=raw,value=latest${{ matrix.node_version.suffix }},enable=${{ matrix.node_version.suffix == '' }}
 
       - name: Build and push image
         uses: docker/build-push-action@v5
@@ -173,8 +167,7 @@ jobs:
           labels: ${{ steps.metadata.outputs.labels }}
           build-args: |
             OPENCLAW_VERSION=${{ needs.check-version.outputs.version }}
-            BASE_IMAGE=${{ matrix.base_image.name }}:${{ matrix.base_image.tag }}
-            NODE_VERSION=${{ matrix.base_image.node_version }}
+            NODE_VERSION=${{ matrix.node_version.version }}
 
       - name: Image digest
         run: echo ${{ steps.build.outputs.digest }}
