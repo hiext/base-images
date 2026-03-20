@@ -4,8 +4,7 @@
 # OpenClaw 版本
 # "latest" 自动跟踪最新版本，也可指定具体版本如 "2026.3.13"
 openclaw:
-  - "latest"
-
+  - "2026.3.13-1"
 # 基础镜像配置
 base_images:
   # Ubuntu 24.04 (推荐) - 最新稳定版
@@ -13,32 +12,26 @@ base_images:
     tag: "24.04"
     node_version: "24"
     description: "Ubuntu 24.04 LTS with Node.js 24"
-
   # Ubuntu 22.04 LTS - 长期支持版本
   - name: "ubuntu"
     tag: "22.04"
     node_version: "22"
     description: "Ubuntu 22.04 LTS with Node.js 22"
-
   # Debian Bookworm - 稳定性优先
   - name: "debian"
     tag: "bookworm"
     node_version: "24"
     description: "Debian 12 (Bookworm) with Node.js 24"
-
 # Python 版本 (使用基础镜像自带的 Python 3)
 python_version: "3"
-
 # FFmpeg 版本 (使用系统包管理器提供的版本)
 ffmpeg_version: "system"
-
 # 构建配置
 build:
   # 多架构支持
   platforms:
     - "linux/amd64"
     - "linux/arm64"
-
   # 构建参数
   args:
     OPENCLAW_VERSION: "latest"
