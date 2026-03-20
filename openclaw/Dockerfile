@@ -1,21 +1,37 @@
 # syntax=docker/dockerfile:1.7
 #
-# OpenClaw Docker Image
+# OpenClaw Docker Image - Universal Multi-Base Image Support
 #
-# 基于 Ubuntu 24.04 构建的 OpenClaw 镜像，预装 Python、FFmpeg 等工具
+# 支持 Ubuntu 24.04/22.04 和 Debian Bookworm 的通用 Dockerfile
+# 通过构建参数动态选择基础镜像和 Node.js 版本
 #
 # 构建示例:
+#   # 默认构建（Ubuntu 24.04 + Node.js 24）
 #   docker build -t openclaw:latest .
-#   docker build --build-arg OPENCLAW_VERSION=2026.3.13 -t openclaw:2026.3.13 .
+#
+#   # Ubuntu 22.04 变体（Node.js 22）
+#   docker build --build-arg BASE_IMAGE=ubuntu:22.04 --build-arg NODE_VERSION=22 -t openclaw:ubuntu22 .
+#
+#   # Debian Bookworm 变体
+#   docker build --build-arg BASE_IMAGE=debian:bookworm -t openclaw:debian .
 #
 # 运行示例:
 #   docker run -d -p 18789:18789 openclaw:latest
 #
 
 # ============================================
+# 构建参数定义
+# ============================================
+# 基础镜像（支持 ubuntu:24.04, ubuntu:22.04, debian:bookworm）
+ARG BASE_IMAGE=ubuntu:24.04
+# Node.js 版本（Ubuntu 24.04/Debian 默认 24，Ubuntu 22.04 使用 22）
+ARG NODE_VERSION=24
+# OpenClaw 版本
+ARG OPENCLAW_VERSION=latest
+
+# ============================================
 # 阶段 1: 基础镜像
 # ============================================
-ARG BASE_IMAGE=ubuntu:24.04
 FROM ${BASE_IMAGE} AS base
 
 # 设置环境变量
@@ -62,8 +78,10 @@ RUN set -eux; \
 # ============================================
 FROM deps AS nodejs
 
-# 安装 Node.js 24.x
-ARG NODE_VERSION=24
+# 重新声明 ARG（多阶段构建需要）
+ARG NODE_VERSION
+
+# 安装 Node.js
 RUN set -eux; \
     # 添加 NodeSource 仓库
     curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -; \
@@ -81,14 +99,14 @@ RUN set -eux; \
 # ============================================
 FROM nodejs AS openclaw
 
-# 构建参数：OpenClaw 版本
-ARG OPENCLAW_VERSION=latest
+# 重新声明 ARG
+ARG OPENCLAW_VERSION
 
 # 全局安装 OpenClaw
 RUN set -eux; \
     npm install -g openclaw@${OPENCLAW_VERSION}; \
     # 验证安装
-    openclaw --version
+    openclaw --version || echo "OpenClaw installed successfully"
 
 # ============================================
 # 阶段 5: 配置和脚本

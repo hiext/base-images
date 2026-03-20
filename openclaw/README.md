@@ -103,14 +103,14 @@ docker run -d \
 ### 构建镜像
 
 ```bash
-# 默认构建（Ubuntu 24.04）
+# 默认构建（Ubuntu 24.04 + Node.js 24）
 docker build -t openclaw:local .
 
-# 构建 Ubuntu 22.04 变体
-docker build -f Dockerfile.ubuntu22 -t openclaw:ubuntu22 .
+# 构建 Ubuntu 22.04 变体（Node.js 22）
+docker build --build-arg BASE_IMAGE=ubuntu:22.04 --build-arg NODE_VERSION=22 -t openclaw:ubuntu22 .
 
-# 构建 Debian 变体
-docker build -f Dockerfile.debian -t openclaw:debian .
+# 构建 Debian Bookworm 变体
+docker build --build-arg BASE_IMAGE=debian:bookworm -t openclaw:debian .
 
 # 指定 OpenClaw 版本
 docker build --build-arg OPENCLAW_VERSION=2026.3.13 -t openclaw:2026.3.13 .

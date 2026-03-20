@@ -103,15 +103,15 @@ jobs:
         base_image:
           - name: ubuntu
             tag: "24.04"
-            dockerfile: Dockerfile
+            node_version: "24"
             suffix: ""
           - name: ubuntu
             tag: "22.04"
-            dockerfile: Dockerfile.ubuntu22
+            node_version: "22"
             suffix: "-ubuntu22"
           - name: debian
             tag: bookworm
-            dockerfile: Dockerfile.debian
+            node_version: "24"
             suffix: "-debian"
 
     steps:
@@ -161,7 +161,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: openclaw/
-          file: openclaw/${{ matrix.base_image.dockerfile }}
+          file: openclaw/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: ${{ steps.should-push.outputs.push }}
           cache-from: type=gha
@@ -171,6 +171,7 @@ jobs:
           build-args: |
             OPENCLAW_VERSION=${{ needs.check-version.outputs.version }}
             BASE_IMAGE=${{ matrix.base_image.name }}:${{ matrix.base_image.tag }}
+            NODE_VERSION=${{ matrix.base_image.node_version }}
 
       - name: Image digest
         run: echo ${{ steps.build.outputs.digest }}
