@@ -19,6 +19,13 @@
 - ✅ **多架构支持**：linux/amd64、linux/arm64
 - ✅ **生产就绪**：健康检查、非 root 用户、安全配置
 
+**📚 完整文档**：
+
+- 🚀 [部署和使用指南](./DEPLOYMENT.md) - 完整的部署、测试和使用说明
+- ⚡ [快速参考卡](./QUICK_REFERENCE.md) - 一页纸快速查询指南
+- 🔄 [CI/CD 工作流说明](./CICD_GUIDE.md) - GitHub Actions 自动化详解
+- 🤖 [AI 上下文文档](./CLAUDE.md) - 模块技术文档
+
 ## 🚀 快速开始
 
 ### 拉取镜像
