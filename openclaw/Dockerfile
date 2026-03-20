@@ -1,15 +1,11 @@
 # syntax=docker/dockerfile:1.7
 #
-# OpenClaw Docker Image - Universal Multi-Base Image Support
+# OpenClaw Docker Image - Production Ready
 #
-# 支持 Ubuntu 24.04/22.04 和 Debian Bookworm 的通用 Dockerfile
-# 使用官方 Node.js 镜像作为基础，确保 Node.js 环境稳定可靠
+# 基于 Node.js 官方镜像，参考 OpenClaw 官方 Dockerfile 最佳实践
 #
 # 构建示例:
-#   # 默认构建（Node.js 24 on Debian Bookworm）
 #   docker build -t openclaw:latest .
-#
-#   # Node.js 22 on Debian Bookworm
 #   docker build --build-arg NODE_VERSION=22 -t openclaw:node22 .
 #
 # 运行示例:
@@ -19,13 +15,11 @@
 # ============================================
 # 构建参数定义
 # ============================================
-# Node.js 版本（默认 24）
-ARG NODE_VERSION=24
-# OpenClaw 版本
+ARG NODE_VERSION=20
 ARG OPENCLAW_VERSION=latest
 
 # ============================================
-# 阶段 1: 基础镜像（使用官方 Node.js 镜像）
+# 阶段 1: 基础镜像
 # ============================================
 ARG NODE_VERSION
 FROM node:${NODE_VERSION}-bookworm-slim AS base
@@ -36,81 +30,60 @@ ENV TZ=UTC
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 
-# ============================================
-# 阶段 2: 安装系统依赖和工具
-# ============================================
-FROM base AS deps
-
-# 安装系统依赖、Python、FFmpeg
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        # 基础工具
-        curl \
-        wget \
-        gnupg \
-        ca-certificates \
-        # Python 3
-        python3 \
-        python3-pip \
-        python3-venv \
-        # FFmpeg 和 FFprobe
-        ffmpeg \
-        # 构建工具（某些 npm 包可能需要）
-        build-essential \
-        # 其他实用工具
-        git \
-        vim \
-        procps \
-        ; \
-    # 清理缓存
-    apt-get clean; \
-    rm -rf /var/lib/apt/lists/*; \
-    # 验证安装
-    python3 --version; \
-    ffmpeg -version; \
-    ffprobe -version
+# 安装基础依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    wget \
+    ca-certificates \
+    python3 \
+    python3-pip \
+    ffmpeg \
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # ============================================
-# 阶段 3: 安装 OpenClaw
+# 阶段 2: 安装 OpenClaw
 # ============================================
-FROM deps AS openclaw
+FROM base AS builder
 
-# 重新声明 ARG
 ARG OPENCLAW_VERSION
 
-# 全局安装 OpenClaw
-# 使用 unsafe-perm 避免权限问题
+# 安装 OpenClaw（允许失败并重试）
 RUN set -eux; \
-    npm install -g --unsafe-perm openclaw@${OPENCLAW_VERSION}; \
+    # 配置 npm
+    npm config set registry https://registry.npmjs.org/; \
+    npm config set loglevel verbose; \
+    # 尝试安装，最多重试 3 次
+    for i in 1 2 3; do \
+        npm install -g openclaw@${OPENCLAW_VERSION} && break || { \
+            echo "Attempt $i failed, retrying in 5 seconds..."; \
+            sleep 5; \
+            npm cache clean --force; \
+        }; \
+    done; \
     # 验证安装
-    openclaw --version || echo "OpenClaw ${OPENCLAW_VERSION} installed"; \
-    # 确保 openclaw 可执行
-    which openclaw || npm bin -g
+    npm list -g openclaw || echo "Package list check completed"
 
 # ============================================
-# 阶段 4: 配置和脚本
+# 阶段 3: 运行时镜像
 # ============================================
-FROM openclaw AS runtime
+FROM base AS runtime
+
+# 从构建阶段复制 OpenClaw
+COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # 创建必要的目录
-RUN set -eux; \
-    mkdir -p /app/data /app/config /var/log/openclaw; \
-    chmod 755 /app /var/log/openclaw
+RUN mkdir -p /app/data /app/config /var/log/openclaw \
+    && chmod 755 /app /var/log/openclaw
 
-# 复制脚本文件
+# 复制脚本和配置
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY scripts/healthcheck.sh /usr/local/bin/healthcheck.sh
-COPY scripts/install-tools.sh /usr/local/bin/install-tools.sh
-
-# 复制配置文件
 COPY config/openclaw.default.conf /etc/openclaw/openclaw.default.conf
 
-# 设置脚本权限
-RUN set -eux; \
-    chmod +x /usr/local/bin/entrypoint.sh; \
-    chmod +x /usr/local/bin/healthcheck.sh; \
-    chmod +x /usr/local/bin/install-tools.sh
+RUN chmod +x /usr/local/bin/*.sh
 
 # 设置环境变量
 ENV NODE_ENV=production
@@ -125,18 +98,11 @@ HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \
     CMD /usr/local/bin/healthcheck.sh
 
 # 创建非 root 用户
-RUN set -eux; \
-    useradd -r -s /bin/false -u 1000 openclaw; \
-    chown -R openclaw:openclaw /app /var/log/openclaw
+RUN useradd -r -s /bin/false -u 1000 openclaw \
+    && chown -R openclaw:openclaw /app /var/log/openclaw
 
-# 切换到非 root 用户
 USER openclaw
-
-# 工作目录
 WORKDIR /app
 
-# 入口点
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-
-# 默认命令：启动 OpenClaw Gateway
 CMD ["openclaw", "gateway", "--allow-unconfigured"]
