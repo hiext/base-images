@@ -1,0 +1,78 @@
+# syntax=docker/dockerfile:1.7
+#
+# OpenClaw Docker Image - Ubuntu 22.04 Variant
+#
+# 基于 Ubuntu 22.04 LTS 构建的 OpenClaw 镜像，预装 Python、FFmpeg 等工具
+#
+# 构建示例:
+#   docker build -f Dockerfile.ubuntu22 -t openclaw:ubuntu22 .
+#
+
+# 继承主 Dockerfile 的构建阶段
+ARG BASE_IMAGE=ubuntu:22.04
+ARG NODE_VERSION=22
+
+# 从主 Dockerfile 复制所有阶段
+COPY Dockerfile /tmp/Dockerfile.main
+
+# 使用 Ubuntu 22.04 作为基础镜像
+FROM ubuntu:22.04 AS base
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
+# 安装系统依赖和工具
+FROM base AS deps
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        curl wget gnupg ca-certificates \
+        python3 python3-pip python3-venv \
+        ffmpeg \
+        git vim procps \
+        ; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*
+
+# 安装 Node.js 22.x
+FROM deps AS nodejs
+RUN set -eux; \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -; \
+    apt-get install -y --no-install-recommends nodejs; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*
+
+# 安装 OpenClaw
+FROM nodejs AS openclaw
+ARG OPENCLAW_VERSION=latest
+RUN npm install -g openclaw@${OPENCLAW_VERSION}
+
+# 配置运行时环境
+FROM openclaw AS runtime
+RUN mkdir -p /app/data /app/config /var/log/openclaw && \
+    chmod 755 /app /var/log/openclaw
+
+COPY scripts/*.sh /usr/local/bin/
+COPY config/openclaw.default.conf /etc/openclaw/
+
+RUN chmod +x /usr/local/bin/*.sh
+
+ENV NODE_ENV=production
+ENV OPENCLAW_PORT=18789
+ENV OPENCLAW_BIND=127.0.0.1
+
+EXPOSE 18789
+
+HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \
+    CMD /usr/local/bin/healthcheck.sh
+
+RUN useradd -r -s /bin/false -u 1000 openclaw && \
+    chown -R openclaw:openclaw /app /var/log/openclaw
+
+USER openclaw
+WORKDIR /app
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["openclaw", "gateway", "--allow-unconfigured"]
