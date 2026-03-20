@@ -83,11 +83,18 @@ FROM deps AS nodejs
 
 # 重新声明 ARG（多阶段构建需要）
 ARG NODE_VERSION
+ARG BASE_IMAGE
 
-# 安装 Node.js
+# 安装 Node.js（兼容 Ubuntu 和 Debian）
 RUN set -eux; \
+    # 创建临时目录
+    mkdir -p /etc/apt/keyrings; \
+    # 下载并添加 NodeSource GPG 密钥
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg; \
     # 添加 NodeSource 仓库
-    curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -; \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_VERSION}.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list; \
+    # 更新包列表
+    apt-get update; \
     # 安装 Node.js
     apt-get install -y --no-install-recommends nodejs; \
     # 清理缓存
