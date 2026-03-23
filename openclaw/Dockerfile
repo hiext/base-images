@@ -14,106 +14,43 @@
 # ============================================
 # 构建参数定义
 # ============================================
-ARG OPENCLAW_VERSION=main
+ARG OPENCLAW_BASE_TAG=latest
 
 # ============================================
-# 阶段 1: 前端构建
+# 使用 OpenClaw 官方镜像作为基础
 # ============================================
-FROM oven/bun:latest AS frontend-builder
+FROM ghcr.io/openclaw/openclaw:${OPENCLAW_BASE_TAG} AS base
 
-WORKDIR /build
+USER root
 
-# 克隆 OpenClaw 仓库，处理不同的版本参数
-RUN git clone --depth 1 https://github.com/openclaw/openclaw.git . && \
-    if [ "$OPENCLAW_VERSION" != "latest" ] && [ "$OPENCLAW_VERSION" != "main" ]; then \
-        git fetch --all --tags && \
-        git checkout "$OPENCLAW_VERSION" || echo "Using main branch"; \
-    fi && \
-    cd web && \
-    bun install && \
-    bun run build
+# 安装 Python 和 FFmpeg
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    python3-venv \
+    ffmpeg \
+    curl \
+    wget \
+    vim \
+    procps \
+    git \
+    openssh-client \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# ============================================
-# 阶段 2: 后端构建
-# ============================================
-FROM golang:alpine AS backend-builder
+# 验证安装
+RUN python3 --version && ffmpeg -version
 
-ENV GO111MODULE=on CGO_ENABLED=0
-ENV GOEXPERIMENT=greenteagc
+# 创建应用目录
+RUN mkdir -p /app/data /app/config /var/log/openclaw \
+    && chown -R node:node /app /var/log/openclaw
 
-WORKDIR /build
+USER node
 
-# 克隆 OpenClaw 仓库，处理不同的版本参数
-RUN apk add --no-cache git && \
-    git clone --depth 1 https://github.com/openclaw/openclaw.git . && \
-    if [ "$OPENCLAW_VERSION" != "latest" ] && [ "$OPENCLAW_VERSION" != "main" ]; then \
-        git fetch --all --tags && \
-        git checkout "$OPENCLAW_VERSION" || echo "Using main branch"; \
-    fi && \
-    go mod download
+WORKDIR /app
 
-# 复制前端构建产物
-COPY --from=frontend-builder /build/dist ./web/dist
-
-# 获取版本信息
-RUN if [ -f VERSION ]; then \
-        VERSION_INFO=$(cat VERSION); \
-    else \
-        VERSION_INFO=$(git describe --tags --always --dirty || echo "unknown"); \
-    fi && \
-    echo "$VERSION_INFO" > VERSION_FILE
-
-# 构建后端
-RUN go build -ldflags "-s -w -X 'github.com/openclaw/openclaw/common.Version=$(cat VERSION_FILE)'" -o new-api
-
-# ============================================
-# 阶段 3: 运行时镜像
-# ============================================
-FROM debian:bookworm-slim AS runtime
-
-# 安装基础工具和依赖
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ca-certificates \
-        tzdata \
-        curl \
-        wget \
-        vim \
-        procps \
-        python3 \
-        python3-pip \
-        python3-venv \
-        ffmpeg \
-        git \
-        openssh-client \
-        && rm -rf /var/lib/apt/lists/* \
-        && update-ca-certificates
-
-# 复制构建产物
-COPY --from=backend-builder /build/new-api /usr/local/bin/openclaw
-
-# 创建必要的目录
-RUN mkdir -p /data /var/log/openclaw && \
-    chmod 755 /data /var/log/openclaw
-
-# 设置环境变量
-ENV TZ=UTC
-ENV SESSION_SECRET=random_session_secret
-ENV SQL_DSN=""
-
-# 暴露端口
-EXPOSE 3000
-
-# 健康检查
+# 偵康检查
 HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \
-    CMD curl -f http://127.0.0.1:3000/healthz || exit 1
+    CMD curl -f http://127.0.0.1:18789/healthz || exit 1
 
-# 创建非 root 用户
-RUN useradd -r -s /bin/false -u 1000 openclaw && \
-    chown -R openclaw:openclaw /data /var/log/openclaw
-
-USER openclaw
-
-WORKDIR /data
-
-CMD ["/usr/local/bin/openclaw", "gateway", "--allow-unconfigured"]
+CMD ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]
