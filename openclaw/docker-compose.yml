@@ -33,14 +33,6 @@ services:
     # 重启策略
     restart: unless-stopped
 
-    # 健康检查
-    healthcheck:
-      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
-      interval: 3m
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-
     # 资源限制
     deploy:
       resources:

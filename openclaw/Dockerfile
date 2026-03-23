@@ -36,23 +36,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # 验证安装
 RUN python3 --version && ffmpeg -version
 
-# 复制自定义脚本
-COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY scripts/healthcheck.sh /usr/local/bin/healthcheck.sh
-
-RUN chmod +x /usr/local/bin/*.sh
-
-# 创建应用目录
-RUN mkdir -p /app/data /app/config /var/log/openclaw \
-    && chown -R node:node /app /var/log/openclaw
-
 USER node
 
 WORKDIR /app
 
+RUN chown node:node /app
+
 # 健康检查
 HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \
     CMD curl -f http://127.0.0.1:18789/healthz || exit 1
-
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]
