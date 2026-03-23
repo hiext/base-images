@@ -41,12 +41,6 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Latest version: $VERSION"
 
-- name: Get main branch version
-        id: get-main
-        run: |
-          echo "version=main" >> $GITHUB_OUTPUT
-          echo "Main branch version: main"
-
       - name: Check if version changed
         id: check-update
         run: |
