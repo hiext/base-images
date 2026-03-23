@@ -42,6 +42,10 @@ COPY scripts/healthcheck.sh /usr/local/bin/healthcheck.sh
 
 RUN chmod +x /usr/local/bin/*.sh
 
+# 创建应用目录
+RUN mkdir -p /app/data /app/config /var/log/openclaw \
+    && chown -R node:node /app /var/log/openclaw
+
 USER node
 
 WORKDIR /app

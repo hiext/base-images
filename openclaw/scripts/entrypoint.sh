@@ -29,44 +29,6 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 函数：初始化配置
-init_config() {
-    log_info "初始化 OpenClaw 配置..."
-
-    # 创建必要的目录
-    local directories=(
-        "/app/data"
-        "/app/config"
-        "/var/log/openclaw"
-    )
-
-    for dir in "${directories[@]}"; do
-        if [[ ! -d "$dir" ]]; then
-            log_info "创建目录: $dir"
-            mkdir -p "$dir"
-        fi
-    done
-
-    # 设置默认环境变量
-    : "${OPENCLAW_PORT:=18789}"
-    : "${OPENCLAW_BIND:=127.0.0.1}"
-    : "${OPENCLAW_TZ:=UTC}"
-    : "${NODE_ENV:=production}"
-
-    # 设置时区
-    if [[ "$OPENCLAW_TZ" != "UTC" ]]; then
-        log_info "设置时区: $OPENCLAW_TZ"
-        export TZ="$OPENCLAW_TZ"
-    fi
-
-    # 应用自定义配置（如果存在）
-    if [[ -f "/app/config/openclaw.conf" ]]; then
-        log_info "加载自定义配置: /app/config/openclaw.conf"
-        # 这里可以添加配置文件处理逻辑
-    fi
-
-    log_info "配置初始化完成"
-}
 
 # 函数：显示环境信息
 show_info() {
@@ -92,7 +54,6 @@ start_gateway() {
 
 # 主函数
 main() {
-    init_config
     show_info
     start_gateway "$@"
 }
