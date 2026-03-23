@@ -14,7 +14,7 @@
 # ============================================
 # 构建参数定义
 # ============================================
-ARG OPENCLAW_VERSION=latest
+ARG OPENCLAW_VERSION=main
 
 # ============================================
 # 阶段 1: 前端构建
@@ -23,8 +23,12 @@ FROM oven/bun:latest AS frontend-builder
 
 WORKDIR /build
 
-# 克隆 OpenClaw 仓库 main 分支
-RUN git clone --depth 1 --branch ${OPENCLAW_VERSION} https://github.com/openclaw/openclaw.git . && \
+# 克隆 OpenClaw 仓库，处理不同的版本参数
+RUN git clone --depth 1 https://github.com/openclaw/openclaw.git . && \
+    if [ "$OPENCLAW_VERSION" != "latest" ] && [ "$OPENCLAW_VERSION" != "main" ]; then \
+        git fetch --all --tags && \
+        git checkout "$OPENCLAW_VERSION" || echo "Using main branch"; \
+    fi && \
     cd web && \
     bun install && \
     bun run build
@@ -39,16 +43,28 @@ ENV GOEXPERIMENT=greenteagc
 
 WORKDIR /build
 
-# 克隆 OpenClaw 仓库 main 分支
+# 克隆 OpenClaw 仓库，处理不同的版本参数
 RUN apk add --no-cache git && \
-    git clone --depth 1 --branch ${OPENCLAW_VERSION} https://github.com/openclaw/openclaw.git . && \
+    git clone --depth 1 https://github.com/openclaw/openclaw.git . && \
+    if [ "$OPENCLAW_VERSION" != "latest" ] && [ "$OPENCLAW_VERSION" != "main" ]; then \
+        git fetch --all --tags && \
+        git checkout "$OPENCLAW_VERSION" || echo "Using main branch"; \
+    fi && \
     go mod download
 
 # 复制前端构建产物
 COPY --from=frontend-builder /build/dist ./web/dist
 
+# 获取版本信息
+RUN if [ -f VERSION ]; then \
+        VERSION_INFO=$(cat VERSION); \
+    else \
+        VERSION_INFO=$(git describe --tags --always --dirty || echo "unknown"); \
+    fi && \
+    echo "$VERSION_INFO" > VERSION_FILE
+
 # 构建后端
-RUN go build -ldflags "-s -w -X 'github.com/openclaw/openclaw/common.Version=$(cat VERSION)'" -o new-api
+RUN go build -ldflags "-s -w -X 'github.com/openclaw/openclaw/common.Version=$(cat VERSION_FILE)'" -o new-api
 
 # ============================================
 # 阶段 3: 运行时镜像
@@ -90,7 +106,7 @@ EXPOSE 3000
 
 # 健康检查
 HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \
-    CMD curl -f http://127.0.0.1:18789/healthz || exit 1
+    CMD curl -f http://127.0.0.1:3000/healthz || exit 1
 
 # 创建非 root 用户
 RUN useradd -r -s /bin/false -u 1000 openclaw && \
