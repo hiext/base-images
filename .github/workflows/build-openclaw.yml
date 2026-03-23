@@ -142,6 +142,7 @@ jobs:
           tags: |
             type=raw,value=${{ needs.check-version.outputs.version }}
             type=raw,value=latest
+            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push image
         uses: docker/build-push-action@v5
