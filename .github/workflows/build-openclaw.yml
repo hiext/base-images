@@ -41,6 +41,12 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Latest version: $VERSION"
 
+- name: Get main branch version
+        id: get-main
+        run: |
+          echo "version=main" >> $GITHUB_OUTPUT
+          echo "Main branch version: main"
+
       - name: Check if version changed
         id: check-update
         run: |
@@ -92,9 +98,19 @@ jobs:
 
       - name: Get version matrix
         id: get-matrix
-        uses: mikefarah/yq@v4
-        with:
-          cmd: yq eval -o=json -I=0 'openclaw/versions.yaml'
+        run: |
+          # Read versions from YAML and create matrix
+          VERSIONS=$(yq '.openclaw' openclaw/versions.yaml)
+          MATRIX_JSON="{\"openclaw\": []}"
+
+          # Process each version
+          while IFS= read -r version; do
+            if [[ -n "$version" && "$version" != "[]" ]]; then
+              MATRIX_JSON=$(echo "$MATRIX_JSON" | jq ".openclaw += [\"$version\"]")
+            fi
+          done < <(echo "$VERSIONS" | yq '.[]')
+
+          echo "result=$MATRIX_JSON" >> $GITHUB_OUTPUT
 
   build-and-push:
     runs-on: ubuntu-latest
@@ -155,6 +171,8 @@ jobs:
           cache-to: type=gha,mode=max
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
+          build-args: |
+            OPENCLAW_VERSION=${{ needs.check-version.outputs.version }}
 
       - name: Image digest
         run: echo ${{ steps.build.outputs.digest }}
