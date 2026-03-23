@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
     python3-venv \
+    ssh\
     ffmpeg \
     curl \
     wget \
@@ -40,10 +41,6 @@ COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY scripts/healthcheck.sh /usr/local/bin/healthcheck.sh
 
 RUN chmod +x /usr/local/bin/*.sh
-
-# 创建应用目录
-RUN mkdir -p /app/data /app/config /var/log/openclaw \
-    && chown -R node:node /app /var/log/openclaw
 
 USER node
 
