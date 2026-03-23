@@ -2,6 +2,7 @@
 
 [![Build and Push Postgres Images](https://github.com/hiext/base-images/actions/workflows/build-postgres.yml/badge.svg)](https://github.com/hiext/base-images/actions/workflows/build-postgres.yml)
 [![Build and Push OpenClaw Images](https://github.com/hiext/base-images/actions/workflows/build-openclaw.yml/badge.svg)](https://github.com/hiext/base-images/actions/workflows/build-openclaw.yml)
+[![Build and Push new-api Images](https://github.com/hiext/base-images/actions/workflows/build-new-api.yml/badge.svg)](https://github.com/hiext/base-images/actions/workflows/build-new-api.yml)
 [![GitHub release](https://img.shields.io/github/v/release/hiext/base-images?include_prereleases)](https://github.com/hiext/base-images/releases)
 [![Docker](https://img.shields.io/badge/Platform-linux%2Famd64%20%7C%20linux%2Farm64-blue)](https://hub.docker.com/r/hiext)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
@@ -77,6 +78,31 @@ docker run -d \
 
 ---
 
+### new-api AI 模型网关镜像
+
+**镜像地址**：`ghcr.io/hiext/new-api`
+
+统一的 AI 模型聚合和分发中心，支持多种 LLM API 转换。
+
+**特性**：
+- ✅ 支持 OpenAI、Claude、Gemini 等多种 LLM
+- ✅ 模型格式转换（OpenAI/Claude/Gemini 兼容）
+- ✅ API 网关功能
+- ✅ 自动版本跟踪
+
+**快速开始**：
+```bash
+docker pull ghcr.io/hiext/new-api:latest
+docker run -d \
+  -p 3000:3000 \
+  -e SESSION_SECRET=your_secret_key \
+  ghcr.io/hiext/new-api:latest
+```
+
+**详细文档**：[new-api/README.md](./new-api/README.md)
+
+---
+
 ## 🚀 快速开始
 
 ### 1. 选择镜像
@@ -87,6 +113,7 @@ docker run -d \
 |-----|---------|------|
 | AI/ML 向量搜索 | `ghcr.io/hiext/postgres` | PostgreSQL + 向量扩展 |
 | 个人 AI 助手 | `ghcr.io/hiext/openclaw` | OpenClaw + 多媒体工具 |
+| AI 模型网关 | `ghcr.io/hiext/new-api` | 多 LLM 聚合网关 |
 
 ### 2. 拉取镜像
 
@@ -96,6 +123,9 @@ docker pull ghcr.io/hiext/postgres:latest
 
 # OpenClaw AI 助手
 docker pull ghcr.io/hiext/openclaw:latest
+
+# new-api AI 模型网关
+docker pull ghcr.io/hiext/new-api:latest
 ```
 
 ### 3. 运行容器

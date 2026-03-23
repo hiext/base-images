@@ -1,8 +1,11 @@
 # base-images 项目文档
 
-> 最后更新：2026-03-19
+> 最后更新：2026-03-23
 
 ## 变更记录 (Changelog)
+
+### 2026-03-23
+- **新增 new-api 模块**：AI 模型聚合网关镜像
 
 ### 2026-03-19
 - 初始化项目 AI 上下文
@@ -19,6 +22,7 @@ base-images 是一个基础 Docker 镜像仓库，用于构建和维护项目所
 
 1. **PostgreSQL 镜像**：集成向量搜索扩展（pgvector、VectorChord、pgvecto.rs），专为机器学习和 AI 应用场景优化
 2. **OpenClaw 镜像**：个人 AI 助手平台，预装 Python、FFmpeg 等工具，支持多基础镜像
+3. **new-api 镜像**：AI 模型聚合网关，支持 OpenAI、Claude、Gemini 等多种 LLM
 
 ---
 
@@ -28,10 +32,12 @@ base-images 是一个基础 Docker 镜像仓库，用于构建和维护项目所
 
 1. **镜像构建层**：
    - PostgreSQL：基于官方 pgvector/pgvector 镜像，叠加 VectorChord 和 pgvecto.rs 扩展
-   - OpenClaw：基于 Node.js 官方镜像，预装 Python、FFmpeg 等工具
+   - OpenClaw：基于官方 OpenClaw 镜像，预装 Python、FFmpeg 等工具
+   - new-api：基于 Debian Bookworm，多阶段构建 Go + Bun 应用
 2. **配置管理层**：
    - PostgreSQL：提供 HDD/SSD 两种存储优化配置模板
    - OpenClaw：提供默认配置和环境变量支持
+   - new-api：提供环境变量配置和数据持久化支持
 3. **CI/CD 层**：GitHub Actions 工作流自动构建和发布到 GitHub Container Registry
 
 ---
@@ -42,12 +48,14 @@ base-images 是一个基础 Docker 镜像仓库，用于构建和维护项目所
 graph TD
     A["(根) base-images"] --> B["postgres"]
     A --> F["openclaw"]
+    A --> G["new-api"]
     A --> C[".github"]
     C --> D["workflows"]
     A --> E[".spec-workflow"]
 
     click B "./postgres/CLAUDE.md" "查看 postgres 模块文档"
     click F "./openclaw/CLAUDE.md" "查看 openclaw 模块文档"
+    click G "./new-api/CLAUDE.md" "查看 new-api 模块文档"
 ```
 
 ---
@@ -58,6 +66,7 @@ graph TD
 |---------|---------|----------|---------|
 | [postgres](./postgres/CLAUDE.md) | PostgreSQL 基础镜像构建，集成向量搜索扩展 | Dockerfile, Shell | Dockerfile |
 | [openclaw](./openclaw/CLAUDE.md) | OpenClaw 个人 AI 助手镜像，预装 Python、FFmpeg | Dockerfile, Shell | Dockerfile |
+| [new-api](./new-api/CLAUDE.md) | new-api AI 模型聚合网关镜像 | Dockerfile, Shell, Go | Dockerfile |
 
 ---
 
