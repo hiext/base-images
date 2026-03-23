@@ -77,7 +77,7 @@ show_info() {
     log_info "npm 版本: $(npm --version)"
     log_info "Python 版本: $(python3 --version)"
     log_info "FFmpeg 版本: $(ffmpeg -version | head -n1)"
-    log_info "OpenClaw 版本: $(openclaw --version 2>/dev/null || echo 'unknown')"
+    log_info "OpenClaw 版本: $(node openclaw.mjs --version 2>/dev/null || echo 'unknown')"
     log_info "绑定地址: $OPENCLAW_BIND:$OPENCLAW_PORT"
     log_info "时区: $OPENCLAW_TZ"
     log_info "环境: $NODE_ENV"
