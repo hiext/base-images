@@ -4,7 +4,7 @@
 # OpenClaw 版本
 # 支持 main 分支和最新版本跟踪
 openclaw:
-  - "main" # 跟踪 main 分支最新版本
+  - "2026.3.13-1" # 跟踪 main 分支最新版本
   - "latest" # 跟踪最新稳定版本
 # 基础镜像配置
 base_images:
