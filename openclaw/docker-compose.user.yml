@@ -1,0 +1,79 @@
+# OpenClaw Docker Compose 配置（用户版）
+# 使用预构建镜像，无需本地构建
+#
+# 使用方法:
+# 1. 下载此文件: curl -O https://raw.githubusercontent.com/yourrepo/openclaw/docker-compose.yml
+# 2. 创建数据目录: mkdir -p data config logs
+# 3. 启动服务: docker compose up -d
+# 4. 查看日志: docker compose logs -f
+#
+# 可选：复制并重命名为 docker-compose.yml 后使用
+
+services:
+  openclaw:
+    # 使用 GitHub Container Registry 上的预构建镜像
+    image: ghcr.io/hiext/openclaw:latest
+    container_name: openclaw-gateway
+
+    # 端口映射
+    ports:
+      - "18789:18789"
+
+    # 环境变量配置
+    environment:
+      # 时区设置
+      - OPENCLAW_TZ=Asia/Shanghai
+      # 运行环境
+      - NODE_ENV=production
+      # 日志级别: debug, info, warn, error
+      - LOG_LEVEL=info
+      # 绑定地址: 0.0.0.0 允许外部访问，127.0.0.1 仅本地访问
+      - GATEWAY_BIND=0.0.0.0
+      # Gateway 端口（通常不需要修改）
+      # - GATEWAY_PORT=18789
+      # 数据目录
+      - OPENCLAW_DATA_DIR=/app/data
+      # 配置目录
+      - OPENCLAW_CONFIG_DIR=/app/config
+
+    # 数据持久化
+    volumes:
+      # 应用数据（聊天记录、配置等）
+      - ./data:/app/data
+      # 配置文件
+      - ./config:/app/config
+      # 日志文件
+      - ./logs:/var/log/openclaw
+
+    # 重启策略
+    restart: unless-stopped
+
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18789/healthz"]
+      interval: 3m
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+
+    # 资源限制（可根据实际情况调整）
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# 可选：自定义网络配置（一般不需要）
+# networks:
+#   default:
+#     name: openclaw-network
