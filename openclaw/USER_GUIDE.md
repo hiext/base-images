@@ -1,5 +1,29 @@
 # OpenClaw 用户使用指南
 
+## 镜像说明
+
+本部署使用 **hiext/openclaw** 扩展镜像，基于 [OpenClaw 官方镜像](https://github.com/openclaw/openclaw) 构建：
+
+| 镜像 | 说明 |
+|------|------|
+| `ghcr.io/openclaw/openclaw:latest` | 官方纯净镜像 |
+| `ghcr.io/hiext/openclaw:latest` | **本镜像** = 官方 + 扩展工具 |
+
+### 扩展内容
+
+在官方镜像基础上预装以下工具：
+
+```
+Python 3.11   - 脚本执行、AI 工具支持
+FFmpeg 5.1   - 多媒体处理
+Git          - 版本控制
+curl         - HTTP 请求
+wget         - 文件下载
+vim          - 文本编辑
+```
+
+**为什么要扩展？** 官方镜像保持精简，我们添加常用工具以支持更多 AI 工作流场景。
+
 ## 快速开始
 
 ### 方式一：使用预构建镜像（推荐）
@@ -65,10 +89,10 @@ curl http://localhost:18789/healthz
 
 | 变量名 | 默认值 | 说明 |
 |--------|--------|------|
-| `GATEWAY_BIND` | `0.0.0.0` | 绑定地址，`127.0.0.1` 仅本地访问 |
-| `GATEWAY_PORT` | `18789` | 服务端口 |
+| `GATEWAY_BIND` | `0.0.0.0` | **绑定地址**，`0.0.0.0` 允许外部，`127.0.0.1` 仅本地 |
 | `LOG_LEVEL` | `info` | 日志级别：debug/info/warn/error |
 | `OPENCLAW_TZ` | `Asia/Shanghai` | 时区设置 |
+| `NODE_ENV` | `production` | 运行环境 |
 
 ### 挂载目录
 

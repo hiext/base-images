@@ -1,11 +1,34 @@
 # OpenClaw Docker 镜像
 
-[![Build and Push OpenClaw Images](https://github.com/hiext/base-images/actions/workflows/build-openclaw.yml/badge.svg)](https://github.com/hiext/base-images/actions/workflows/build-openclaw.yml)
+[![Build and Push OpenClaw Images](https://github.com/hiext/base-images/actions/workflows/build-openclaw.yml/badge.svg)](https://github.com/hiext/base-images/workflows/build-openclaw.yml)
 [![OpenClaw](https://img.shields.io/badge/OpenClaw-latest-blue)](https://github.com/openclaw/openclaw)
 [![Docker](https://img.shields.io/badge/Docker-24.04%20%7C%2022.04%20%7C%20Debian-blue)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-> 🦞 自定义 OpenClaw Docker 镜像，预装 Python、FFmpeg、FFprobe，支持多基础镜像
+> 🦞 基于 [OpenClaw 官方镜像](https://github.com/openclaw/openclaw) 扩展构建，预装 Python、FFmpeg 等常用工具
+
+## 📋 镜像关系
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  ghcr.io/openclaw/openclaw:latest                        │
+│  ↳ OpenClaw 官方纯净镜像                                  │
+│  ↳ Node.js + OpenClaw Gateway                             │
+└────────────────────┬────────────────────────────────────┘
+                     │ 基于官方镜像扩展
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│  ghcr.io/hiext/openclaw:latest                           │
+│  ↳ **本仓库构建的扩展镜像**                                │
+│  ↳ 官方镜像 + Python 3.11 + FFmpeg + Git + 常用工具       │
+└─────────────────────────────────────────────────────────┘
+```
+
+**使用本镜像的优势**：
+- ✅ 完全兼容官方功能
+- ✅ 预装 AI 工作流常用工具
+- ✅ 无需每次手动安装依赖
+- ✅ 与官方版本同步更新
 
 ## 📖 简介
 
@@ -28,7 +51,25 @@
 
 ## 🚀 快速开始
 
-### 拉取镜像
+### 方式一：使用 Docker Compose（推荐）
+
+```bash
+# 1. 下载配置
+curl -O https://raw.githubusercontent.com/hiext/base-images/main/openclaw/docker-compose.user.yml
+mv docker-compose.user.yml docker-compose.yml
+
+# 2. 创建数据目录
+mkdir -p data config logs
+
+# 3. 启动
+docker compose up -d
+
+# 4. 验证
+docker compose ps
+curl http://localhost:18789/healthz
+```
+
+### 方式二：直接拉取镜像
 
 ```bash
 # 从 GitHub Container Registry 拉取
@@ -58,18 +99,21 @@ docker run -d \
   ghcr.io/hiext/openclaw:latest
 ```
 
-### 使用 Docker Compose
+### 使用 Docker Compose（完整版）
 
 ```bash
-# 克隆仓库
+# 克隆仓库（本地构建）
 git clone https://github.com/hiext/base-images.git
 cd base-images/openclaw
 
-# 启动服务
-docker-compose up -d
+# 本地构建并启动
+docker compose -f docker-compose.yml up -d --build
+
+# 或使用预构建镜像（更快）
+docker compose -f docker-compose.user.yml up -d
 
 # 查看日志
-docker-compose logs -f openclaw
+docker compose logs -f openclaw
 ```
 
 ## 📦 可用镜像标签
