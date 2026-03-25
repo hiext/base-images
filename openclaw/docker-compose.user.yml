@@ -13,6 +13,9 @@
 #
 # 官方镜像：ghcr.io/openclaw/openclaw:latest
 # 扩展镜像：ghcr.io/hiext/openclaw:latest
+#
+# ⚠️ 重要提示：
+# 首次启动需要完成初始化配置！请参考文档中的初始化步骤。
 # ==========================================
 
 services:
@@ -35,28 +38,38 @@ services:
       # 日志级别: debug, info, warn, error
       - LOG_LEVEL=info
       # Gateway 绑定地址（0.0.0.0 允许外部访问）
-      # OpenClaw 使用 GATEWAY_BIND 而非 GATEWAY_HOST
       - GATEWAY_BIND=0.0.0.0
+      # 数据目录
+      - OPENCLAW_DATA_DIR=/app/data
+      # 配置目录
+      - OPENCLAW_CONFIG_DIR=/app/config
+      # ⚠️ 首次启动必须设置：允许未配置的 Gateway 启动（完成初始化后需移除或设为 false）
+      - GATEWAY_ALLOW_UNCONFIGURED=true
 
     # 数据持久化挂载
     volumes:
-      # 应用数据（聊天记录、配置等）
+      # 应用数据（聊天记录、应用状态等）
+      # 挂载后密钥和配置将持久化保存
       - ./data:/app/data
       # 配置文件目录
       - ./config:/app/config
       # 日志文件
       - ./logs:/var/log/openclaw
+      # ⚠️ 重要：必须挂载宿主机的 .openclaw 目录用于初始化
+      # 首次启动后，openclaw.json 将保存在这里
+      - ~/.openclaw:/home/node/.openclaw
 
     # 自动重启策略
+    # 注意：如果初始化未完成，容器可能反复重启
     restart: unless-stopped
 
     # 健康检查配置
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:18789/healthz"]
-      interval: 3m
+      interval: 1m
       timeout: 10s
-      start_period: 30s
-      retries: 3
+      start_period: 60s
+      retries: 5
 
     # 资源限制（可根据实际情况调整）
     deploy:
@@ -75,26 +88,52 @@ services:
         max-size: "10m"
         max-file: "3"
 
-# 网络配置（使用默认网络即可）
+    # 命令覆盖：确保使用正确的参数启动
+    # --allow-unconfigured 允许首次启动时无配置
+    command: ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]
+
 # ==========================================
 # 快速开始：
 #
-# 启动服务：
-#   docker compose up -d
+# 首次部署流程：
+# 1. 创建工作目录：
+#    mkdir openclaw && cd openclaw
 #
-# 查看状态：
-#   docker compose ps
-#   docker compose logs -f
+# 2. 下载配置：
+#    curl -O https://raw.githubusercontent.com/hiext/base-images/main/openclaw/docker-compose.user.yml
+#    mv docker-compose.user.yml docker-compose.yml
 #
-# 停止服务：
-#   docker compose down
+# 3. 创建数据目录：
+#    mkdir -p data config logs ~/.openclaw
 #
-# 更新镜像：
-#   docker compose pull
-#   docker compose up -d
+# 4. 启动服务：
+#    docker compose up -d
+#
+# 5. 等待初始化完成（约 30 秒）：
+#    docker compose logs -f
+#
+# 6. 获取访问令牌：
+#    cat ~/.openclaw/config/gateway.token
+#    或
+#    docker compose exec openclaw cat /home/node/.openclaw/config/gateway.token
+#
+# 7. 验证运行状态：
+#    curl http://localhost:18789/healthz
+#
+# 常用命令：
+# 查看日志：  docker compose logs -f
+# 停止服务：  docker compose down
+# 重启服务：  docker compose restart
+# 查看配置：  cat ~/.openclaw/config/openclaw.json
 #
 # 访问地址：
-#   Gateway:     ws://localhost:18789
-#   Health:      http://localhost:18789/healthz
-#   Browser:     http://localhost:18791/
+# Gateway:     ws://localhost:18789
+# Health:      http://localhost:18789/healthz
+# Browser:     http://localhost:18791/
+#
+# ⚠️ 故障排除：
+# 如果容器反复重启，检查：
+# 1. 是否已创建 ~/.openclaw 目录
+# 2. 查看错误日志：docker compose logs --tail=50
+# 3. 确认 GATEWAY_ALLOW_UNCONFIGURED=true
 # ==========================================
