@@ -34,7 +34,46 @@ vim          - 文本编辑
 - 至少 2GB 内存
 - 确保没有进程占用 18789 端口
 
-### 首次部署（推荐）
+### 方式一：一键安装脚本（推荐 ⭐）
+
+**只需要一条命令**，脚本自动完成所有操作：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hiext/base-images/main/openclaw/install.sh | bash
+```
+
+**脚本会自动完成：**
+- ✅ 检查 Docker 环境
+- ✅ 创建工作目录 (`~/openclaw`)
+- ✅ 创建配置目录 (`~/.openclaw`)
+- ✅ 生成环境配置文件
+- ✅ 拉取镜像并启动
+- ✅ 等待服务就绪
+- ✅ 显示访问信息和 Token
+
+**安装完成后**，你会看到类似输出：
+
+```
+╔════════════════════════════════════════════════════════╗
+║              OpenClaw 安装完成!                        ║
+╠════════════════════════════════════════════════════════╣
+║  📡 Gateway:  ws://localhost:18789                    ║
+║  🔍 Health:   http://localhost:18789/healthz         ║
+║  🔑 Token:    xxxxxxxxxxxxxxxxxxxxxx                  ║
+╚════════════════════════════════════════════════════════╝
+```
+
+**或者**，先下载再运行（更可控）：
+
+```bash
+curl -O https://raw.githubusercontent.com/hiext/base-images/main/openclaw/install.sh
+chmod +x install.sh
+./install.sh
+```
+
+---
+
+### 方式二：手动部署（适合自定义配置）
 
 **为什么需要初始化？** OpenClaw 首次启动时会生成访问令牌和配置文件，必须完成初始化才能正常运行。
 

@@ -51,7 +51,15 @@
 
 ## 🚀 快速开始
 
-### 方式一：使用 Docker Compose（推荐）
+### 方式一：一键安装（最简单 ⭐ 推荐）
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hiext/base-images/main/openclaw/install.sh | bash
+```
+
+安装完成后，会自动显示 Gateway 地址和 Token。
+
+### 方式二：使用 Docker Compose（手动）
 
 ```bash
 # 1. 下载配置
@@ -59,14 +67,13 @@ curl -O https://raw.githubusercontent.com/hiext/base-images/main/openclaw/docker
 mv docker-compose.user.yml docker-compose.yml
 
 # 2. 创建数据目录
-mkdir -p data config logs
+curl -O https://raw.githubusercontent.com/hiext/base-images/main/openclaw/install.sh
+chmod +x install.sh
+./install.sh
+```
 
-# 3. 启动
-docker compose up -d
+> **提示：** 即使使用手动方式，也建议运行 install.sh，它会自动创建必要的目录和配置。
 
-# 4. 验证
-docker compose ps
-curl http://localhost:18789/healthz
 ```
 
 ### 方式二：直接拉取镜像
