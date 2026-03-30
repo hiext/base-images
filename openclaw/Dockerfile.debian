@@ -1,0 +1,55 @@
+# syntax=docker/dockerfile:1.7
+#
+# OpenClaw Docker Image - Debian Bookworm 变体
+#
+# 预装 Python、FFmpeg、国内镜像源等工具
+#
+
+ARG OPENCLAW_BASE_TAG=latest
+
+FROM ghcr.io/openclaw/openclaw:${OPENCLAW_BASE_TAG} AS openclaw-base
+
+USER root
+
+# 安装 Python、FFmpeg 和常用工具
+RUN apt-get update && apt-get install -y --no-install-recommends \\
+ python3 \\
+ python3-pip \\
+ python3-venv \\
+ ffmpeg \\
+ curl \\
+ wget \\
+ vim \\
+ procps \\
+ git \\
+ openssh-client \\
+ ca-certificates \\
+ && apt-get clean \\
+ && rm -rf /var/lib/apt/lists/*
+
+# 配置 pip 使用清华大学 TUNA 镜像源
+RUN pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \\
+ pip3 config set install.trusted-host pypi.tuna.tsinghua.edu.cn
+
+# 创建应用目录
+RUN mkdir -p /app/data /app/config /var/log/openclaw \\
+ && chown -R node:node /app /var/log/openclaw
+
+# 切换到 node 用户配置 npm
+USER node
+
+# 配置 npm 使用淘宝镜像源
+RUN npm config set registry https://registry.npmmirror.com
+
+# 验证安装
+USER root
+RUN python3 --version && pip3 --version && ffmpeg -version
+
+USER node
+
+WORKDIR /app
+
+HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \\
+ CMD curl -f http://127.0.0.1:18789/healthz || exit 1
+
+CMD ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]

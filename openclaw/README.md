@@ -5,28 +5,31 @@
 [![Docker](https://img.shields.io/badge/Docker-24.04%20%7C%2022.04%20%7C%20Debian-blue)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-> 🦞 基于 [OpenClaw 官方镜像](https://github.com/openclaw/openclaw) 扩展构建，预装 Python、FFmpeg 等常用工具
+> 🦞 基于 [OpenClaw 官方镜像](https://github.com/openclaw/openclaw) 扩展构建，预装 Python、FFmpeg 等常用工具，配置国内镜像源加速
 
 ## 📋 镜像关系
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  ghcr.io/openclaw/openclaw:latest                        │
-│  ↳ OpenClaw 官方纯净镜像                                  │
-│  ↳ Node.js + OpenClaw Gateway                             │
+│ ghcr.io/openclaw/openclaw:latest │
+│ ↳ OpenClaw 官方纯净镜像 │
+│ ↳ Node.js + OpenClaw Gateway │
 └────────────────────┬────────────────────────────────────┘
-                     │ 基于官方镜像扩展
-                     ▼
+ │ 基于官方镜像扩展
+ ▼
 ┌─────────────────────────────────────────────────────────┐
-│  ghcr.io/hiext/openclaw:latest                           │
-│  ↳ **本仓库构建的扩展镜像**                                │
-│  ↳ 官方镜像 + Python 3.11 + FFmpeg + Git + 常用工具       │
+│ ghcr.io/hiext/openclaw:latest │
+│ ↳ **本仓库构建的扩展镜像** │
+│ ↳ 官方镜像 + Python + FFmpeg + 国内镜像源 + 常用工具 │
 └─────────────────────────────────────────────────────────┘
 ```
 
 **使用本镜像的优势**：
 - ✅ 完全兼容官方功能
 - ✅ 预装 AI 工作流常用工具
+- ✅ **pip 清华大学 TUNA 镜像源** - 加速 Python 包下载
+- ✅ **npm 淘宝镜像源** - 加速 Node.js 包下载
+- ✅ Python 虚拟环境支持
 - ✅ 无需每次手动安装依赖
 - ✅ 与官方版本同步更新
 
@@ -37,7 +40,11 @@
 **主要特性**：
 
 - ✅ **多基础镜像支持**：Ubuntu 24.04/22.04、Debian Bookworm
-- ✅ **预装工具**：Python 3、FFmpeg、FFprobe
+- ✅ **预装工具**：Python 3、FFmpeg、FFprobe、Git
+- ✅ **国内镜像加速**：
+  - pip 清华大学 TUNA 镜像（https://pypi.tuna.tsinghua.edu.cn）
+  - npm 淘宝镜像（https://registry.npmmirror.com）
+- ✅ **Python 虚拟环境**：内置 venv，开箱即用
 - ✅ **自动版本跟踪**：自动获取并构建最新版本
 - ✅ **多架构支持**：linux/amd64、linux/arm64
 - ✅ **生产就绪**：健康检查、非 root 用户、安全配置
@@ -46,6 +53,7 @@
 
 - 🚀 [部署和使用指南](./DEPLOYMENT.md) - 完整的部署、测试和使用说明
 - ⚡ [快速参考卡](./QUICK_REFERENCE.md) - 一页纸快速查询指南
+- 🛠️ [工具使用指南](./CLI_TOOLS_GUIDE.md) - Python、npm、FFmpeg 使用说明
 - 🔄 [CI/CD 工作流说明](./CICD_GUIDE.md) - GitHub Actions 自动化详解
 - 🤖 [AI 上下文文档](./CLAUDE.md) - 模块技术文档
 
@@ -74,9 +82,7 @@ chmod +x install.sh
 
 > **提示：** 即使使用手动方式，也建议运行 install.sh，它会自动创建必要的目录和配置。
 
-```
-
-### 方式二：直接拉取镜像
+### 方式三：直接拉取镜像
 
 ```bash
 # 从 GitHub Container Registry 拉取
@@ -92,18 +98,18 @@ docker pull ghcr.io/hiext/openclaw:latest-debian
 ```bash
 # 基本运行
 docker run -d \
-  --name openclaw \
-  -p 18789:18789 \
-  ghcr.io/hiext/openclaw:latest
+ --name openclaw \
+ -p 18789:18789 \
+ ghcr.io/hiext/openclaw:latest
 
 # 使用环境变量配置
 docker run -d \
-  --name openclaw \
-  -p 18789:18789 \
-  -e OPENCLAW_TZ=Asia/Shanghai \
-  -e GATEWAY_BIND=0.0.0.0 \
-  -v $(pwd)/data:/app/data \
-  ghcr.io/hiext/openclaw:latest
+ --name openclaw \
+ -p 18789:18789 \
+ -e OPENCLAW_TZ=Asia/Shanghai \
+ -e GATEWAY_BIND=0.0.0.0 \
+ -v $(pwd)/data:/app/data \
+ ghcr.io/hiext/openclaw:latest
 ```
 
 ### 使用 Docker Compose（完整版）
@@ -130,8 +136,9 @@ docker compose logs -f openclaw
 | `latest` | Ubuntu 24.04 | 推荐使用，最新功能 |
 | `latest-ubuntu22` | Ubuntu 22.04 LTS | 长期支持版本 |
 | `latest-debian` | Debian 12 Bookworm | 稳定性优先 |
-| `2026.3.13` | Ubuntu 24.04 | 指定版本 |
-| `2026.3.13-ubuntu22` | Ubuntu 22.04 | 指定版本 + 基础镜像 |
+| `main` | 自动构建 | 跟随 main 分支最新代码 |
+| `main-ubuntu22` | 自动构建 | Ubuntu 22.04 变体 |
+| `main-debian` | 自动构建 | Debian 变体 |
 
 ## 🔧 配置
 
@@ -149,12 +156,44 @@ docker compose logs -f openclaw
 
 ```bash
 docker run -d \
-  --name openclaw \
-  -v $(pwd)/data:/app/data \
-  -v $(pwd)/config:/app/config \
-  -v $(pwd)/logs:/var/log/openclaw \
-  ghcr.io/hiext/openclaw:latest
+ --name openclaw \
+ -v $(pwd)/data:/app/data \
+ -v $(pwd)/config:/app/config \
+ -v $(pwd)/logs:/var/log/openclaw \
+ ghcr.io/hiext/openclaw:latest
 ```
+
+## 🛠️ 预装工具使用
+
+### Python + pip
+
+```bash
+# pip 已配置清华镜像源，直接使用
+docker exec openclaw pip3 install numpy pandas
+
+# 创建 Python 虚拟环境
+docker exec -it openclaw bash -c "cd /app/data && python3 -m venv myenv && source myenv/bin/activate"
+```
+
+### Node.js + npm
+
+```bash
+# npm 已配置淘宝镜像源，直接使用
+docker exec openclaw npm install lodash
+
+# 查看 npm 配置
+docker exec openclaw npm config get registry
+# 输出：https://registry.npmmirror.com
+```
+
+### FFmpeg
+
+```bash
+# 视频转码
+docker exec openclaw ffmpeg -i input.mp4 output.mp4
+```
+
+更多使用说明请参考 [CLI_TOOLS_GUIDE.md](./CLI_TOOLS_GUIDE.md)。
 
 ## 🛠️ 本地构建
 
@@ -198,8 +237,13 @@ curl http://localhost:18789/healthz
 ### 验证预装工具
 
 ```bash
-# 检查 Python
+# 检查 Python（已配置清华镜像）
 docker run --rm openclaw:local python3 --version
+docker run --rm openclaw:local pip3 config get global.index-url
+
+# 检查 npm（已配置淘宝镜像）
+docker run --rm openclaw:local npm --version
+docker run --rm openclaw:local npm config get registry
 
 # 检查 FFmpeg
 docker run --rm openclaw:local ffmpeg -version
@@ -239,9 +283,9 @@ docker run -it --rm openclaw:local /bin/bash
 
 ```bash
 docker run -d \
-  -p 18789:18789 \
-  -e GATEWAY_BIND=0.0.0.0 \
-  openclaw:local
+ -p 18789:18789 \
+ -e GATEWAY_BIND=0.0.0.0 \
+ openclaw:local
 ```
 
 ### 权限问题
@@ -252,10 +296,36 @@ docker run -d \
 docker run -d --user root openclaw:local
 ```
 
+### 镜像源配置
+
+**验证 pip 镜像源：**
+```bash
+docker exec openclaw pip3 config list
+# 应显示：global.index-url='https://pypi.tuna.tsinghua.edu.cn/simple'
+```
+
+**验证 npm 镜像源：**
+```bash
+docker exec openclaw npm config get registry
+# 应显示：https://registry.npmmirror.com
+```
+
+**恢复官方源（可选）：**
+
+```bash
+# pip 恢复官方源
+docker exec openclaw pip3 config unset global.index-url
+
+# npm 恢复官方源
+docker exec openclaw npm config set registry https://registry.npmjs.org/
+```
+
 ## 📖 相关链接
 
 - [OpenClaw 官方文档](https://docs.openclaw.ai)
 - [OpenClaw GitHub](https://github.com/openclaw/openclaw)
+- [pip 清华大学 TUNA 镜像](https://mirrors.tuna.tsinghua.edu.cn/help/pypi/)
+- [npm 淘宝镜像](https://npmmirror.com/)
 - [Docker Hub](https://hub.docker.com/r/hiext/openclaw)
 
 ## 🤝 贡献
