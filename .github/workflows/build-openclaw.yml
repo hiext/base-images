@@ -28,9 +28,9 @@ jobs:
  fail-fast: false
  matrix:
  variant:
- - { name: "ubuntu", tag: "24.04", node: "24", suffix: "" }
- - { name: "ubuntu", tag: "22.04", node: "22", suffix: "-ubuntu22" }
- - { name: "debian", tag: "bookworm", node: "24", suffix: "-debian" }
+ - { name: "ubuntu", tag: "24.04", node: "24", suffix: "", dockerfile: "Dockerfile" }
+ - { name: "ubuntu", tag: "22.04", node: "22", suffix: "-ubuntu22", dockerfile: "Dockerfile.ubuntu22" }
+ - { name: "debian", tag: "bookworm", node: "24", suffix: "-debian", dockerfile: "Dockerfile.debian" }
 
  steps:
  - name: Checkout
@@ -63,7 +63,7 @@ jobs:
  uses: docker/build-push-action@v5
  with:
  context: openclaw/
- file: openclaw/Dockerfile
+ file: openclaw/${{ matrix.variant.dockerfile }}
  platforms: linux/amd64,linux/arm64
  push: ${{ github.event_name != 'pull_request' }}
  cache-from: type=gha,scope=openclaw-${{ matrix.variant.name }}-${{ matrix.variant.tag }}
@@ -72,10 +72,9 @@ jobs:
  labels: ${{ steps.metadata.outputs.labels }}
  build-args: |
  OPENCLAW_BASE_TAG=latest
- BASE_IMAGE=${{ matrix.variant.name }}:${{ matrix.variant.tag }}
- NODE_VERSION=${{ matrix.variant.node }}
 
  - name: Image digest
  run: |
  echo "Variant: ${{ matrix.variant.name }}:${{ matrix.variant.tag }}"
+ echo "Dockerfile: ${{ matrix.variant.dockerfile }}"
  echo "Tags: ${{ steps.metadata.outputs.tags }}"

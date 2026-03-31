@@ -19,6 +19,7 @@ IMAGE_NAME="${1:-openclaw:test}"
 VARIANT="${2:-default}"
 DATE=$(date '+%Y%m%d_%H%M%S')
 TEST_RESULTS="test-results-${DATE}.log"
+CONTAINER_NAME="openclaw-test-${DATE}"
 
 # 检查 Docker 是否可用
 check_docker() {
@@ -69,16 +70,25 @@ test_pip_mirror() {
  echo "========================================"
 
  local index_url
- index_url=$(docker run --rm "${IMAGE_NAME}" pip3 config get global.index-url 2>&1)
+ local exit_code
 
- if [[ "$index_url" == "https://pypi.tuna.tsinghua.edu.cn/simple" ]]; then
+ # 先检查命令是否执行成功
+ index_url=$(docker run --rm "${IMAGE_NAME}" pip3 config get global.index-url 2>&1) || exit_code=$?
+
+ if [[ -n "$exit_code" ]]; then
+ echo -e "${RED}✗ pip config 命令执行失败${NC}"
+ echo " 错误输出: ${index_url}"
+ echo "PIP_MIRROR_SUCCESS=false" >> "${TEST_RESULTS}"
+ return 1
+ elif [[ "$index_url" == "https://pypi.tuna.tsinghua.edu.cn/simple" ]]; then
  echo -e "${GREEN}✓ pip 镜像源已配置为清华大学 TUNA${NC}"
- echo "  URL: ${index_url}"
+ echo " URL: ${index_url}"
  echo "PIP_MIRROR_SUCCESS=true" >> "${TEST_RESULTS}"
  else
- echo -e "${YELLOW}! pip 镜像源未配置${NC}"
- echo "  当前: ${index_url}"
+ echo -e "${YELLOW}! pip 镜像源未配置或配置不正确${NC}"
+ echo " 当前: ${index_url}"
  echo "PIP_MIRROR_SUCCESS=false" >> "${TEST_RESULTS}"
+ return 1
  fi
  echo ""
 }
@@ -90,16 +100,24 @@ test_npm_mirror() {
  echo "========================================"
 
  local registry
- registry=$(docker run --rm "${IMAGE_NAME}" npm config get registry 2>&1)
+ local exit_code
 
- if [[ "$registry" == "https://registry.npmmirror.com/" ]] || [[ "$registry" == "https://registry.npmmirror.com" ]]; then
+ registry=$(docker run --rm "${IMAGE_NAME}" npm config get registry 2>&1) || exit_code=$?
+
+ if [[ -n "$exit_code" ]]; then
+ echo -e "${RED}✗ npm config 命令执行失败${NC}"
+ echo " 错误输出: ${registry}"
+ echo "NPM_MIRROR_SUCCESS=false" >> "${TEST_RESULTS}"
+ return 1
+ elif [[ "$registry" == "https://registry.npmmirror.com/" ]] || [[ "$registry" == "https://registry.npmmirror.com" ]]; then
  echo -e "${GREEN}✓ npm 镜像源已配置为淘宝镜像${NC}"
- echo "  URL: ${registry}"
+ echo " URL: ${registry}"
  echo "NPM_MIRROR_SUCCESS=true" >> "${TEST_RESULTS}"
  else
- echo -e "${YELLOW}! npm 镜像源未配置${NC}"
- echo "  当前: ${registry}"
+ echo -e "${YELLOW}! npm 镜像源未配置或配置不正确${NC}"
+ echo " 当前: ${registry}"
  echo "NPM_MIRROR_SUCCESS=false" >> "${TEST_RESULTS}"
+ return 1
  fi
  echo ""
 }
@@ -132,38 +150,6 @@ test_python_venv() {
  echo ""
 }
 
-# 测试 pip 安装（可选，需要联网）
-test_pip_install() {
- echo "========================================"
- echo "测试 pip 安装（联网测试）"
- echo "========================================"
-
- if docker run --rm "${IMAGE_NAME}" pip3 install --dry-run requests > /dev/null 2>&1; then
- echo -e "${GREEN}✓ pip 安装测试成功${NC}"
- echo "PIP_INSTALL_SUCCESS=true" >> "${TEST_RESULTS}"
- else
- echo -e "${YELLOW}! pip 安装测试失败（可能需要联网）${NC}"
- echo "PIP_INSTALL_SUCCESS=false" >> "${TEST_RESULTS}"
- fi
- echo ""
-}
-
-# 测试 npm 安装（可选，需要联网）
-test_npm_install() {
- echo "========================================"
- echo "测试 npm 安装（联网测试）"
- echo "========================================"
-
- if docker run --rm "${IMAGE_NAME}" npm install --dry-run lodash > /dev/null 2>&1; then
- echo -e "${GREEN}✓ npm 安装测试成功${NC}"
- echo "NPM_INSTALL_SUCCESS=true" >> "${TEST_RESULTS}"
- else
- echo -e "${YELLOW}! npm 安装测试失败（可能需要联网）${NC}"
- echo "NPM_INSTALL_SUCCESS=false" >> "${TEST_RESULTS}"
- fi
- echo ""
-}
-
 # 测试 FFmpeg
 test_ffmpeg() {
  echo "========================================"
@@ -174,31 +160,113 @@ test_ffmpeg() {
  local version
  version=$(docker run --rm "${IMAGE_NAME}" ffmpeg -version | head -1 | cut -d' ' -f3)
  echo -e "${GREEN}✓ FFmpeg 已安装${NC}"
- echo "  版本: ${version}"
+ echo " 版本: ${version}"
  echo "FFMPEG_INSTALLED=true" >> "${TEST_RESULTS}"
  else
  echo -e "${RED}✗ FFmpeg 未安装${NC}"
  echo "FFMPEG_INSTALLED=false" >> "${TEST_RESULTS}"
+ return 1
  fi
  echo ""
 }
 
-# 测试 OpenClaw 功能
-test_openclaw() {
+# 测试 Node.js
+test_nodejs() {
  echo "========================================"
- echo "测试 OpenClaw 安装"
+ echo "测试 Node.js 安装"
  echo "========================================"
 
  if docker run --rm "${IMAGE_NAME}" which node > /dev/null 2>&1; then
  local node_version
  node_version=$(docker run --rm "${IMAGE_NAME}" node --version)
  echo -e "${GREEN}✓ Node.js 已安装${NC}"
- echo "  版本: ${node_version}"
+ echo " 版本: ${node_version}"
  echo "NODE_INSTALLED=true" >> "${TEST_RESULTS}"
  else
  echo -e "${RED}✗ Node.js 未安装${NC}"
  echo "NODE_INSTALLED=false" >> "${TEST_RESULTS}"
+ return 1
  fi
+ echo ""
+}
+
+# 测试容器启动和健康检查
+test_container_runtime() {
+ echo "========================================"
+ echo "测试容器启动和健康检查"
+ echo "========================================"
+
+ local start_time=$(date +%s)
+ local timeout=30
+
+ # 启动容器
+ echo "启动容器..."
+ if ! docker run -d --name "${CONTAINER_NAME}" -p 18789:18789 "${IMAGE_NAME}" > /dev/null 2>&1; then
+ echo -e "${RED}✗ 容器启动失败${NC}"
+ echo "CONTAINER_START_SUCCESS=false" >> "${TEST_RESULTS}"
+ docker logs "${CONTAINER_NAME}" 2>&1 || true
+ return 1
+ fi
+
+ echo -e "${GREEN}✓ 容器启动成功${NC}"
+ echo "CONTAINER_START_SUCCESS=true" >> "${TEST_RESULTS}"
+
+ # 等待容器进入健康状态
+ echo "等待容器健康检查（最多 ${timeout}s）..."
+ local elapsed=0
+ local health_status
+
+ while [[ $elapsed -lt $timeout ]]; do
+ health_status=$(docker inspect --format='{{.State.Health.Status}}' "${CONTAINER_NAME}" 2>/dev/null || echo "unknown")
+
+ if [[ "$health_status" == "healthy" ]]; then
+ local end_time=$(date +%s)
+ local startup_time=$((end_time - start_time))
+ echo -e "${GREEN}✓ 容器健康检查通过 (${startup_time}s)${NC}"
+ echo "CONTAINER_HEALTHY=true" >> "${TEST_RESULTS}"
+ echo "STARTUP_TIME=${startup_time}" >> "${TEST_RESULTS}"
+
+ # 测试健康端点
+ if docker exec "${CONTAINER_NAME}" curl -f http://127.0.0.1:18789/healthz > /dev/null 2>&1; then
+ echo -e "${GREEN}✓ 健康端点 (/healthz) 可访问${NC}"
+ echo "HEALTHZ_ACCESSIBLE=true" >> "${TEST_RESULTS}"
+ else
+ echo -e "${YELLOW}! 健康端点访问失败${NC}"
+ echo "HEALTHZ_ACCESSIBLE=false" >> "${TEST_RESULTS}"
+ fi
+
+ # 停止并删除容器
+ docker stop "${CONTAINER_NAME}" > /dev/null 2>&1 || true
+ docker rm "${CONTAINER_NAME}" > /dev/null 2>&1 || true
+
+ return 0
+ elif [[ "$health_status" == "unhealthy" ]]; then
+ echo -e "${RED}✗ 容器健康检查失败${NC}"
+ echo "CONTAINER_HEALTHY=false" >> "${TEST_RESULTS}"
+ echo "容器日志:"
+ docker logs "${CONTAINER_NAME}" 2>&1 || true
+
+ # 停止并删除容器
+ docker stop "${CONTAINER_NAME}" > /dev/null 2>&1 || true
+ docker rm "${CONTAINER_NAME}" > /dev/null 2>&1 || true
+
+ return 1
+ fi
+
+ sleep 1
+ ((elapsed++))
+ done
+
+ echo -e "${RED}✗ 容器启动超时 (${timeout}s)${NC}"
+ echo "CONTAINER_HEALTHY=timeout" >> "${TEST_RESULTS}"
+ echo "容器日志:"
+ docker logs "${CONTAINER_NAME}" 2>&1 || true
+
+ # 停止并删除容器
+ docker stop "${CONTAINER_NAME}" > /dev/null 2>&1 || true
+ docker rm "${CONTAINER_NAME}" > /dev/null 2>&1 || true
+
+ return 1
  echo ""
 }
 
@@ -214,10 +282,10 @@ show_summary() {
  while IFS='=' read -r key value; do
  if [[ "$value" == "true" ]]; then
  echo -e "${GREEN}✓ ${key}${NC}"
- ((passed++))
- elif [[ "$value" == "false" ]]; then
+ ((passed=passed+1))
+ elif [[ "$value" == "false" ]] || [[ "$value" == "timeout" ]]; then
  echo -e "${RED}✗ ${key}${NC}"
- ((failed++))
+ ((failed=failed+1))
  fi
  done < "${TEST_RESULTS}"
 
@@ -240,7 +308,11 @@ cleanup() {
  echo "========================================"
  echo "正在清理..."
  echo "========================================"
- docker container prune -f --filter "label=test=openclaw" > /dev/null 2>&1 || true
+
+ # 删除测试容器（如果存在）
+ docker stop "${CONTAINER_NAME}" > /dev/null 2>&1 || true
+ docker rm "${CONTAINER_NAME}" > /dev/null 2>&1 || true
+
  echo "清理完成"
 }
 
@@ -253,16 +325,18 @@ main() {
  # 清理旧的结果文件
  rm -f "${TEST_RESULTS}"
 
+ # 注册清理函数
+ trap cleanup EXIT
+
  # 执行测试
  check_docker
  build_image || { echo "构建失败，退出测试"; exit 1; }
  test_pip_mirror
  test_npm_mirror
  test_python_venv
- test_pip_install
- test_npm_install
  test_ffmpeg
- test_openclaw
+ test_nodejs
+ test_container_runtime
  show_summary
 
  # 提示用户
@@ -272,18 +346,15 @@ main() {
  echo "========================================"
  echo ""
  echo "1. 推送镜像到仓库（可选）:"
- echo "   docker tag ${IMAGE_NAME} ghcr.io/username/openclaw:test"
- echo "   docker push ghcr.io/username/openclaw:test"
+ echo " docker tag ${IMAGE_NAME} ghcr.io/username/openclaw:test"
+ echo " docker push ghcr.io/username/openclaw:test"
  echo ""
  echo "2. 运行容器进行手动测试:"
- echo "   docker run -d -p 18789:18789 --name openclaw-test ${IMAGE_NAME}"
+ echo " docker run -d -p 18789:18789 --name openclaw-test ${IMAGE_NAME}"
  echo ""
  echo "3. 查看日志:"
- echo "   docker logs openclaw-test"
+ echo " docker logs openclaw-test"
  echo ""
-
- # 清理
- trap cleanup EXIT
 }
 
 # 执行主函数

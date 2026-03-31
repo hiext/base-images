@@ -18,7 +18,8 @@ cd openclaw
 # 赋予执行权限
 chmod +x test-build.sh
 
-# 运行测试（将自动构建所有变体并测试）
+# 运行测试（自动构建默认变体并测试）
+# 注意：脚本只构建当前目录的 Dockerfile，如需测试其他变体请手动构建
 ./test-build.sh openclaw:test
 
 # 测试结果将保存到 test-results-YYYYMMDD_HHMMSS.log
