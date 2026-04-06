@@ -140,7 +140,7 @@ jobs:
             NEW_API_VERSION=${{ needs.check-version.outputs.version }}
 
       - name: Image digest
-        run: echo ${{ steps.build.outputs.digest }}
+        run: echo ${{ steps.build-and-push.outputs.digest }}
 
   results:
     if: always()
