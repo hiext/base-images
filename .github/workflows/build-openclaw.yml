@@ -66,8 +66,7 @@ jobs:
           file: openclaw/${{ matrix.variant.dockerfile }}
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
-          cache-from: type=gha,scope=openclaw-${{ matrix.variant.name }}-${{ matrix.variant.tag }}
-          cache-to: type=gha,mode=max,scope=openclaw-${{ matrix.variant.name }}-${{ matrix.variant.tag }}
+          no-cache: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
           build-args: |
