@@ -61,7 +61,7 @@ RUN apk add --no-cache git && \
 RUN go mod download
 
 # 复制前端构建产物
-COPY --from=frontend-builder /build/dist ./web/dist
+COPY --from=frontend-builder /build/web/dist ./web/dist
 
 # 构建后端
 RUN go build -ldflags "-s -w -X 'github.com/QuantumNous/new-api/common.Version=$(cat VERSION)'" -o new-api
