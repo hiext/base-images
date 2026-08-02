@@ -4,7 +4,7 @@
 # new-api 版本
 # "latest" 自动跟踪最新版本，也可指定具体版本如 "v0.5.0"
 new-api:
-  - "null"
+  - "v1.0.0-rc.23"
 # 基础镜像配置
 base_image: "debian:bookworm-slim"
 # 构建配置
